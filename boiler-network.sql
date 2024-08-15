@@ -1,3 +1,8 @@
+-- Create extensions
+
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS postgis_topology;
+
 -- Create trigger functions
 
 CREATE OR REPLACE FUNCTION geom.create_vertex_under_node()
