@@ -10,6 +10,23 @@ CREATE SCHEMA topo;
 
 -- Create trigger functions
 
+-- topo
+
+CREATE OR REPLACE FUNCTION topo.update_topo_geom()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+BEGIN
+	NEW.topo = (SELECT topology.toTopoGeom(NEW.geom, 'topo', 1)
+			   	WHERE OLD.id = NEW.id);
+	RETURN NEW;
+END;
+$BODY$;
+
+-- geom
+
 CREATE OR REPLACE FUNCTION geom.create_vertex_under_node()
     RETURNS trigger
     LANGUAGE 'plpgsql'
