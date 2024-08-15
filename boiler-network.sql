@@ -6,7 +6,10 @@ CREATE EXTENSION IF NOT EXISTS postgis_topology;
 -- Create schema 
 
 CREATE SCHEMA geom;
-CREATE SCHEMA topo;
+
+-- Create topology 
+
+SELECT topology.CreateTopology('topo', 2056);
 
 -- Create trigger functions
 
@@ -18,9 +21,14 @@ CREATE OR REPLACE FUNCTION topo.update_topo_geom()
     COST 100
     VOLATILE NOT LEAKPROOF
 AS $BODY$
+DECLARE
+    schema_table text := format('%I.%I', TG_TABLE_SCHEMA, TG_TABLE_NAME);
+    layer_id integer;
+    topo text := quote_ident('topo');
 BEGIN
-	NEW.topo = (SELECT topology.toTopoGeom(NEW.geom, 'topo', 1)
-			   	WHERE OLD.id = NEW.id);
+    EXECUTE format('select layer_id(topology.findLayer(%L, %L))', schema_table, topo) INTO layer_id;
+	EXECUTE format('SELECT topology.toTopoGeom((SELECT ST_FORCE2D($1)), %L, $2)
+			   	WHERE $3 = $4', topo, layer_id) USING NEW.geom, layer_id, OLD.id, NEW.id;
 	RETURN NEW;
 END;
 $BODY$;
@@ -180,10 +188,10 @@ CREATE TABLE IF NOT EXISTS geom.node
 (
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1000000 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
     geom geometry(PointZ,2056),
-    topo topogeometry,
-    CONSTRAINT node_pkey PRIMARY KEY (id),
-    CONSTRAINT check_topogeom_topo CHECK ((topo).topology_id = 3 AND (topo).layer_id = 2 AND (topo).type = 1)
+    CONSTRAINT node_pkey PRIMARY KEY (id)
 );
+
+SELECT topology.AddTopoGeometryColumn('topo', 'geom', 'node', 'topo', 'POINT') AS layer_id;
 
 CREATE INDEX IF NOT EXISTS node_geom_index
     ON geom.node USING gist(geom);
@@ -214,14 +222,14 @@ CREATE TRIGGER update_topo_geom
 
 
 -- Create line table
-CREATE TABLE IF NOT EXISTS public.line
+CREATE TABLE IF NOT EXISTS geom.line
 (
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1000000 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
     geom geometry(LineStringZ,2056),
-    topo topogeometry,
-    CONSTRAINT line_pkey PRIMARY KEY (id),
-    CONSTRAINT check_topogeom_topo CHECK ((topo).topology_id = 3 AND (topo).layer_id = 1 AND (topo).type = 2)
+    CONSTRAINT line_pkey PRIMARY KEY (id)
 );
+
+SELECT topology.AddTopoGeometryColumn('topo', 'geom', 'line', 'topo', 'LINE') AS layer_id;
 
 CREATE INDEX IF NOT EXISTS line_geom_index
     ON geom.line USING gist(geom);
