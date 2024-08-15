@@ -3,6 +3,11 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS postgis_topology;
 
+-- Create schema 
+
+CREATE SCHEMA geom;
+CREATE SCHEMA topo;
+
 -- Create trigger functions
 
 CREATE OR REPLACE FUNCTION geom.create_vertex_under_node()
@@ -161,10 +166,10 @@ CREATE TABLE IF NOT EXISTS geom.node
     topo topogeometry,
     CONSTRAINT node_pkey PRIMARY KEY (id),
     CONSTRAINT check_topogeom_topo CHECK ((topo).topology_id = 3 AND (topo).layer_id = 2 AND (topo).type = 1)
-)
+);
 
 CREATE INDEX IF NOT EXISTS node_geom_index
-    ON geom.node USING gist;
+    ON geom.node USING gist(geom);
 	
 CREATE TRIGGER create_line_vertex_on_node_insert
     AFTER INSERT
@@ -199,10 +204,10 @@ CREATE TABLE IF NOT EXISTS public.line
     topo topogeometry,
     CONSTRAINT line_pkey PRIMARY KEY (id),
     CONSTRAINT check_topogeom_topo CHECK ((topo).topology_id = 3 AND (topo).layer_id = 1 AND (topo).type = 2)
-)
+);
 
 CREATE INDEX IF NOT EXISTS line_geom_index
-    ON geom.line USING gist;
+    ON geom.line USING gist(geom);
 	
 CREATE TRIGGER delete_orphan_node_on_line_delete
     AFTER DELETE OR UPDATE 
@@ -245,7 +250,7 @@ CREATE TABLE IF NOT EXISTS geom.join_line_node
         ON UPDATE CASCADE
         ON DELETE CASCADE
         NOT VALID
-)
+);
 
 CREATE TRIGGER log_deleting_line_node_join
     BEFORE DELETE
@@ -264,4 +269,4 @@ CREATE TABLE IF NOT EXISTS geom.trash_can
     source_table name COLLATE pg_catalog."C" NOT NULL,
     source_schema name COLLATE pg_catalog."C" NOT NULL,
     CONSTRAINT trash_can_pkey PRIMARY KEY (id)
-)
+);
