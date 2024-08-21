@@ -26,7 +26,7 @@ DECLARE
     layer_id integer;
     topo text := quote_ident('topo');
 BEGIN
-    EXECUTE format('select layer_id(topology.findLayer(%L, %L))', schema_table, topo) INTO layer_id;
+    EXECUTE format('SELECT layer_id(topology.findLayer(%L, %L))', schema_table, topo) INTO layer_id;
 	EXECUTE format('SELECT topology.toTopoGeom((SELECT ST_FORCE2D($1)), %L, $2)
 			   	WHERE $3 = $4', topo, layer_id) USING NEW.geom, layer_id, OLD.id, NEW.id;
 	RETURN NEW;
@@ -64,28 +64,7 @@ CREATE OR REPLACE FUNCTION geom.delete_orphan_nodes()
 AS $BODY$
 BEGIN
     IF (TG_OP = 'DELETE') THEN
-        -- Get nodes intersecting the old line geometry.
-        WITH n AS (
-            SELECT n.id, n.geom
-            FROM geom.node n
-            WHERE ST_INTERSECTS(OLD.geom, n.geom)),
-        nl AS (
-            -- Get neighbour lines.
-            SELECT l.geom
-            FROM geom.line l
-            WHERE ST_TOUCHES(OLD.geom, l.geom)
-            AND NOT ST_EQUALS(OLD.geom, l.geom)),
-        dn AS (
-            -- Select nodes not intersecting neighbours among the ones intersecting the old geometry.
-            SELECT n.id
-            FROM n
-            LEFT JOIN nl on st_intersects(n.geom, nl.geom)
-            WHERE nl.geom is null)
-
-        -- Delete nodes selected above.
-        DELETE FROM geom.node n
-        WHERE n.id IN (SELECT * FROM dn);
-    
+        DELETE FROM geom.node n                                                                                                                                                                                                                              WHERE n.id NOT IN (SELECT id_node FROM geom.join_line_node);    
     ELSIF(TG_OP = 'UPDATE') THEN
        -- Get nodes intersecting the old line geometry.
         WITH 
